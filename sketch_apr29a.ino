@@ -3,7 +3,8 @@
 #include <TimerOne.h>
 #include "DHT.h"
 
-#define NUM_LEDS 7
+#define NUM_LEDS 14
+#define NUM_DIGITS 2
 #define DATA_PIN 6
 #define TIME_INTERVAL 500
 #define DHT_SAMPLING_RATE 5000
@@ -54,10 +55,12 @@ void showNumber() {
     Serial.println(currentColor);
     const char *number = numbers[currentNumber];
     FastLED.clear();
-    for (int i = 0; i < strlen(number); i++) {
-        int index = number[i] - '0';
-        leds[index].setHSV(currentColor, 255, 255);
-      }
+    for (int j = 0; j < NUM_DIGITS; j++) {
+      for (int i = 0; i < strlen(number); i++) {
+          int index = number[i] - '0';
+          leds[index + j * 7].setHSV(currentColor, 255, 255);
+        }
+    }
     FastLED.show();
     currentNumber = (currentNumber + 1) % 10;
   }
