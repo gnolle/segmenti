@@ -3,8 +3,8 @@
 #include <TimerOne.h>
 #include "DHT.h"
 
-#define NUM_LEDS 21
-#define NUM_DIGITS 3
+#define NUM_LEDS 29
+#define NUM_DIGITS 4
 #define DATA_PIN 6
 #define TIME_INTERVAL 1000
 #define MODE_INTERVAL 5000
@@ -17,7 +17,12 @@ DHT dht;
 
 volatile uint8_t currentColor;
 volatile int16_t lastValue, currentValue;
-const char *characters[10] = { "012456", "04", "12345", "01345", "0346", "01356", "012356", "045", "0123456", "013456"};
+const char *numbers[10] = { "012456", "04", "12345", "01345", "0346", "01356", "012356", "045", "0123456", "013456"};
+const char *characters[3] = { 
+  "3456",      // upper circle
+  "1256",      // C 
+  "0123"       // lower circle
+};
 
 float humidity = 0.0;
 float temperature = 0.0;
@@ -92,7 +97,7 @@ void showNumber() {
     Serial.println(currentColor);
     FastLED.clear();
     for (int j = 0; j < NUM_DIGITS; j++) {
-      setCharOnDigit(currentNumber, j, currentColor);
+      setCharOnDigit(numbers[currentNumber], j, currentColor);
     }
     FastLED.show();
     currentNumber = (currentNumber + 1) % 10;
@@ -101,9 +106,11 @@ void showNumber() {
 
 void showColorSetting() {
   FastLED.clear();
-  setCharOnDigit(8, 2, currentColor);
-  setCharOnDigit(8, 1, currentColor);
-  setCharOnDigit(8, 0, currentColor);
+  setCharOnDigit(numbers[8], 3, currentColor);
+  setCharOnDigit(numbers[8], 2, currentColor);
+  setCharOnDigit(numbers[8], 1, currentColor);
+  setCharOnDigit(numbers[8], 0, currentColor);
+  setColon(currentColor);
   FastLED.show();
 }
 
@@ -122,8 +129,10 @@ void showTemperature() {
     Serial.println("temp end");
     
     FastLED.clear();
-    setCharOnDigit(firstTempChar, 1, currentColor);
-    setCharOnDigit(secondTempChar, 0, currentColor);
+    setCharOnDigit(numbers[firstTempChar], 3, currentColor);
+    setCharOnDigit(numbers[secondTempChar], 2, currentColor);
+    setCharOnDigit(characters[0], 1, currentColor);
+    setCharOnDigit(characters[1], 0, currentColor);
     FastLED.show();
   }
 }
@@ -136,31 +145,31 @@ void showHumidity() {
     uint8_t roundedHumidity = (uint8_t) (humidity + 0.5);
     uint8_t firstHumidChar = roundedHumidity / 10;
     uint8_t secondHumidChar = roundedHumidity % 10;
-
-    Serial.println("humid start");
-    Serial.println(firstHumidChar);
-    Serial.println(secondHumidChar);
-    Serial.println("humid end");
     
     FastLED.clear();
-    setCharOnDigit(firstHumidChar, 1, currentColor);
-    setCharOnDigit(secondHumidChar, 0, currentColor);
+    setCharOnDigit(numbers[firstHumidChar], 3, currentColor);
+    setCharOnDigit(numbers[secondHumidChar], 2, currentColor);
+    setCharOnDigit(characters[0], 1, currentColor);
+    setCharOnDigit(characters[2], 0, currentColor);
     FastLED.show();
   }
 }
 
-void setCharOnDigit(uint8_t characterIndex, uint8_t digitIndex, uint8_t color) {
-  const char *character = characters[characterIndex];
+void setCharOnDigit(const char *character, uint8_t digitIndex, uint8_t color) {
   for (int i = 0; i < strlen(character); i++) {
     int index = character[i] - '0';
     leds[index + getDigitOffset(digitIndex)].setHSV(color, 255, 255);
   }
 }
 
+void setColon(uint8_t color) {
+  leds[14].setHSV(color, 255, 255);
+}
+
 uint8_t getDigitOffset(uint8_t digitIndex) {
-  //if (digitIndex < 2)
+  if (digitIndex < 2)
     return digitIndex * 7;
-  //return digitIndex * 7 + 1;
+  return digitIndex * 7 + 1;
 }
 
 void readEncoder() {
