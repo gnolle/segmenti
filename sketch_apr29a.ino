@@ -1,7 +1,10 @@
 #include <FastLED.h>
+#include <DS3232RTC.h>
 #include <ClickEncoder.h>
 #include <TimerOne.h>
 #include "DHT.h"
+#include <Time.h>
+#include <Timezone.h>
 
 #define NUM_LEDS 29
 #define NUM_DIGITS 4
@@ -46,6 +49,16 @@ void setup() {
   Timer1.attachInterrupt(timerIsr); 
   
   lastValue = -1;
+
+  setSyncProvider(RTC.get);
+}
+
+time_t getLocalTime() {
+  static TimeChangeRule germanSummerTime = {"DEUS", Last, Sun, Mar, 2, 120};
+  static TimeChangeRule germanWinterTime = {"WINS", Last, Sun, Oct, 3, 60};
+  static Timezone germanTime(germanSummerTime, germanWinterTime);
+  time_t localTime = germanTime.toLocal(now());
+  return localTime;
 }
 
 void timerIsr() {
@@ -67,7 +80,7 @@ void loop() {
         showHumidity();
       } else
       if (mode == 2) {
-        showNumber();
+        showTime();
       }
 }
 
@@ -152,6 +165,30 @@ void showHumidity() {
     setCharOnDigit(characters[0], 1, currentColor);
     setCharOnDigit(characters[2], 0, currentColor);
     FastLED.show();
+  }
+}
+
+void showTime() {
+  static unsigned long previousMillis = 0;
+
+  static bool isColonVisible = true;
+  if (millis() - previousMillis > TIME_INTERVAL) {
+    previousMillis = millis();
+    time_t localTime = getLocalTime();
+
+    byte remainingHourDigit1 = hour(localTime) / 10;
+    byte remainingHourDigit2 = hour(localTime) % 10;
+    byte remainingMinuteDigit1 = minute(localTime) / 10;
+    byte remainingMinuteDigit2 = minute(localTime) % 10;
+
+    FastLED.clear();
+    setCharOnDigit(numbers[remainingHourDigit1], 3, currentColor);
+    setCharOnDigit(numbers[remainingHourDigit2], 2, currentColor);
+    if (isColonVisible) setColon(currentColor);
+    setCharOnDigit(numbers[remainingMinuteDigit1], 1, currentColor);
+    setCharOnDigit(numbers[remainingMinuteDigit2], 0, currentColor);
+    FastLED.show();
+    isColonVisible = !isColonVisible;
   }
 }
 
