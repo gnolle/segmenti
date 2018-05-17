@@ -2,21 +2,16 @@
 #include <DS3232RTC.h>
 #include <ClickEncoder.h>
 #include <TimerOne.h>
-#include "DHT.h"
 #include <Time.h>
 #include <Timezone.h>
 
 #define NUM_LEDS 29
 #define NUM_DIGITS 4
 #define DATA_PIN 6
-#define TIME_INTERVAL 1000
-#define MODE_INTERVAL 5000
-#define COLOR_CHANGE_TIMEOUT 2000
-#define DHT_SAMPLING_RATE 5000
+#define TIME_INTERVAL 100
+#define MODE_INTERVAL 10000
 
 CRGB leds[NUM_LEDS];
-
-DHT dht;
 
 volatile uint8_t currentColor;
 volatile int16_t lastValue, currentValue;
@@ -27,20 +22,13 @@ const char *characters[3] = {
   "0123"       // lower circle
 };
 
-float humidity = 0.0;
-float temperature = 0.0;
-
 uint8_t mode = 0;
-
-volatile unsigned long timeOfLastColorChange = 0;
 
 ClickEncoder *encoder;
 
 void setup() {
   FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
   Serial.begin(9600);
-
-  dht.setup(2);
   
   encoder = new ClickEncoder(3, 4);
   encoder->setAccelerationEnabled(false);
@@ -66,39 +54,20 @@ void timerIsr() {
 }
 
 void loop() {
-  readEncoder(); 
-  readDht();
+  readEncoder();
   updateMode();
-
-  if (isColorSettingVisible()) {
-    showColorSetting();
-  } else
-    if (mode == 0) {
-      showTemperature();
-    } else
-      if (mode == 1) {
-        showHumidity();
-      } else
-      if (mode == 2) {
-        showTime();
-      }
-}
-
-bool isColorSettingVisible() {
-  if (timeOfLastColorChange == 0) {
-    return false;
+  if (mode == 0) {
+    showTemperature();
+  } else {
+    showTime();
   }
-  if (millis() - timeOfLastColorChange > COLOR_CHANGE_TIMEOUT) {
-    return false;
-  }
-  return true;
 }
 
 void updateMode() {
   static unsigned long previousMillis = 0;
   if (millis() - previousMillis > MODE_INTERVAL) {
     previousMillis = millis();
-    mode = (mode + 1) % 3;
+    mode = (mode + 1) % 2;
   }
 }
 
@@ -117,22 +86,15 @@ void showNumber() {
   }
 }
 
-void showColorSetting() {
-  FastLED.clear();
-  setCharOnDigit(numbers[8], 3, currentColor);
-  setCharOnDigit(numbers[8], 2, currentColor);
-  setCharOnDigit(numbers[8], 1, currentColor);
-  setCharOnDigit(numbers[8], 0, currentColor);
-  setColon(currentColor);
-  FastLED.show();
-}
-
 void showTemperature() {
   static unsigned long previousMillis = 0;
   if (millis() - previousMillis > TIME_INTERVAL) {
     previousMillis = millis();
+
+    int t = RTC.temperature();
+    float celsius = t / 4.0;
     
-    uint8_t roundedTemperature = (uint8_t) (temperature + 0.5);
+    uint8_t roundedTemperature = (uint8_t) (celsius + 0.5);
     uint8_t firstTempChar = roundedTemperature / 10;
     uint8_t secondTempChar = roundedTemperature % 10;
 
@@ -150,24 +112,6 @@ void showTemperature() {
   }
 }
 
-void showHumidity() {
-  static unsigned long previousMillis = 0;
-  if (millis() - previousMillis > TIME_INTERVAL) {
-    previousMillis = millis();
-    
-    uint8_t roundedHumidity = (uint8_t) (humidity + 0.5);
-    uint8_t firstHumidChar = roundedHumidity / 10;
-    uint8_t secondHumidChar = roundedHumidity % 10;
-    
-    FastLED.clear();
-    setCharOnDigit(numbers[firstHumidChar], 3, currentColor);
-    setCharOnDigit(numbers[secondHumidChar], 2, currentColor);
-    setCharOnDigit(characters[0], 1, currentColor);
-    setCharOnDigit(characters[2], 0, currentColor);
-    FastLED.show();
-  }
-}
-
 void showTime() {
   static unsigned long previousMillis = 0;
 
@@ -180,6 +124,9 @@ void showTime() {
     byte remainingHourDigit2 = hour(localTime) % 10;
     byte remainingMinuteDigit1 = minute(localTime) / 10;
     byte remainingMinuteDigit2 = minute(localTime) % 10;
+    byte remainingSecondDigit2 = second(localTime) % 10;
+
+    isColonVisible = remainingSecondDigit2 % 2 == 0;
 
     FastLED.clear();
     setCharOnDigit(numbers[remainingHourDigit1], 3, currentColor);
@@ -188,7 +135,6 @@ void showTime() {
     setCharOnDigit(numbers[remainingMinuteDigit1], 1, currentColor);
     setCharOnDigit(numbers[remainingMinuteDigit2], 0, currentColor);
     FastLED.show();
-    isColonVisible = !isColonVisible;
   }
 }
 
@@ -214,26 +160,6 @@ void readEncoder() {
   if (currentValue != lastValue) {
     lastValue = currentValue;
     currentColor = currentValue;
-    timeOfLastColorChange = millis();
-  }
-}
-
-void readDht() {
-  static unsigned long previousMillis = 0;
-  if (millis() - previousMillis > DHT_SAMPLING_RATE) {
-    previousMillis = millis();
-    float humidityReading = dht.getHumidity();
-    if (humidityReading == humidityReading) {
-     humidity = humidityReading;
-    }
-
-    float temperatureReading = dht.getTemperature();
-    if (temperatureReading == temperatureReading) {
-      temperature = temperatureReading;
-    }
-
-    Serial.println(humidity);
-    Serial.println(temperature);
   }
 }
 
