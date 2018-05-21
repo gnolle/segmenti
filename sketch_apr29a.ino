@@ -9,6 +9,7 @@
 #define NUM_DIGITS 4
 #define DATA_PIN 6
 #define TIME_INTERVAL 100
+#define TEMP_INTERVAL 1000
 #define MODE_INTERVAL 10000
 
 CRGB leds[NUM_LEDS];
@@ -71,24 +72,9 @@ void updateMode() {
   }
 }
 
-void showNumber() {
-  static unsigned long previousMillis = 0;
-  static uint8_t currentNumber = 0;
-  if (millis() - previousMillis > TIME_INTERVAL) {
-    previousMillis = millis();
-    Serial.println(currentColor);
-    FastLED.clear();
-    for (int j = 0; j < NUM_DIGITS; j++) {
-      setCharOnDigit(numbers[currentNumber], j, currentColor);
-    }
-    FastLED.show();
-    currentNumber = (currentNumber + 1) % 10;
-  }
-}
-
 void showTemperature() {
   static unsigned long previousMillis = 0;
-  if (millis() - previousMillis > TIME_INTERVAL) {
+  if (millis() - previousMillis > TEMP_INTERVAL) {
     previousMillis = millis();
 
     int t = RTC.temperature();
@@ -97,11 +83,6 @@ void showTemperature() {
     uint8_t roundedTemperature = (uint8_t) (celsius + 0.5);
     uint8_t firstTempChar = roundedTemperature / 10;
     uint8_t secondTempChar = roundedTemperature % 10;
-
-    Serial.println("temp start");
-    Serial.println(firstTempChar);
-    Serial.println(secondTempChar);
-    Serial.println("temp end");
     
     FastLED.clear();
     setCharOnDigit(numbers[firstTempChar], 3, currentColor);
