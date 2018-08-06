@@ -9,7 +9,6 @@
 #define NUM_DIGITS 4
 #define DATA_PIN 6
 #define TIME_INTERVAL 100
-#define TEMP_INTERVAL 1000
 #define MODE_INTERVAL 10000
 
 CRGB leds[NUM_LEDS];
@@ -17,13 +16,6 @@ CRGB leds[NUM_LEDS];
 volatile uint8_t currentColor;
 volatile int16_t lastValue, currentValue;
 const char *numbers[10] = { "012456", "04", "12345", "01345", "0346", "01356", "012356", "045", "0123456", "013456"};
-const char *characters[3] = { 
-  "3456",      // upper circle
-  "1256",      // C 
-  "0123"       // lower circle
-};
-
-uint8_t mode = 0;
 
 ClickEncoder *encoder;
 
@@ -56,41 +48,7 @@ void timerIsr() {
 
 void loop() {
   readEncoder();
-  updateMode();
-  if (mode == 0) {
-    showTemperature();
-  } else {
-    showTime();
-  }
-}
-
-void updateMode() {
-  static unsigned long previousMillis = 0;
-  if (millis() - previousMillis > MODE_INTERVAL) {
-    previousMillis = millis();
-    mode = (mode + 1) % 2;
-  }
-}
-
-void showTemperature() {
-  static unsigned long previousMillis = 0;
-  if (millis() - previousMillis > TEMP_INTERVAL) {
-    previousMillis = millis();
-
-    int t = RTC.temperature();
-    float celsius = t / 4.0;
-    
-    uint8_t roundedTemperature = (uint8_t) (celsius + 0.5);
-    uint8_t firstTempChar = roundedTemperature / 10;
-    uint8_t secondTempChar = roundedTemperature % 10;
-    
-    FastLED.clear();
-    setCharOnDigit(numbers[firstTempChar], 3, currentColor);
-    setCharOnDigit(numbers[secondTempChar], 2, currentColor);
-    setCharOnDigit(characters[0], 1, currentColor);
-    setCharOnDigit(characters[1], 0, currentColor);
-    FastLED.show();
-  }
+  showTime();
 }
 
 void showTime() {
